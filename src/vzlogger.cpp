@@ -189,6 +189,7 @@ void show_usage(char *argv[]) {
 	printf("\n  following APIs are supported:\n");
 	printf("\tvolkszaehler-api\n");
 	printf("\tmysmartgrid-api\n");
+	printf("\tlinknx-api\n");
 
 	/* footer */
 	printf("\n%s - volkszaehler.org logging utility\n", PACKAGE_STRING);

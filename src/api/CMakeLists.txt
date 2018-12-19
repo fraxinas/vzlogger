@@ -5,6 +5,7 @@ set(api_srcs
   Volkszaehler.cpp
   MySmartGrid.cpp
   InfluxDB.cpp
+  LinKNX.cpp
   Null.cpp
   CurlIF.cpp
   CurlCallback.cpp

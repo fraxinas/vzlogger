@@ -232,6 +232,39 @@
             "required": ["api", "uuid", "identifier", "host"]
         },
 
+        "channelLinKNX": {
+            "type": "object",
+            "title": "channel for LinKNX",
+            "properties": {
+                "api": {
+                    "type": "string",
+                    "enum": ["linknx"],
+                    "default": "linknx",
+                    "description": "middleware/api/database to be used."
+                },
+                "knx_group": {
+                    "type": "string",
+                    "description": "named linknx group ID of this channel",
+                    "pattern": "^[a-fA-F0-9:].*$"
+                },
+                "identifier": {
+                    "type": "string",
+                    "description": "identifier of this channel from the meter. E.g. 1-0:1.8.0 (for sml) or Impulse (for s0)"
+                },
+                "host": {
+                    "type": "string",
+                    "default": "localhost",
+                    "description": "hostname of the linknx server"
+                },
+                "port": {
+                    "type": "integer",
+                    "default": 1028,
+                    "description": "the TCP port of the linknx server"
+                }
+            },
+            "required": ["api", "knx_group", "identifier", "host", "port"]
+        },
+
         "meter": {
             "type": "object",
             "title": "meter",

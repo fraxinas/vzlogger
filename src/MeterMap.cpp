@@ -40,6 +40,7 @@
 #include <api/Volkszaehler.hpp>
 #include <api/MySmartGrid.hpp>
 #include <api/InfluxDB.hpp>
+#include <api/LinKNX.hpp>
 #include <api/Null.hpp>
 #include "threads.h"
 
@@ -131,6 +132,10 @@ void MeterMap::registration() {
 		else if (0 == strcasecmp((*ch)->apiProtocol().c_str(), "influxdb")) {
 			api =  vz::ApiIF::Ptr(new vz::api::InfluxDB(*ch, (*ch)->options()));
 			print(log_debug, "Using InfluxDB api", (*ch)->name());
+		}
+		else if (0 == strcasecmp((*ch)->apiProtocol().c_str(), "linknx")) {
+			api =  vz::ApiIF::Ptr(new vz::api::LinKNX(*ch, (*ch)->options()));
+			print(log_debug, "Using LinKNX api", (*ch)->name());
 		}
 		else if (0 == strcasecmp((*ch)->apiProtocol().c_str(), "null")) {
 			api =  vz::ApiIF::Ptr(new vz::api::Null(*ch, (*ch)->options()));
