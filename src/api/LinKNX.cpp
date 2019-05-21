@@ -73,36 +73,37 @@ vz::api::LinKNX::LinKNX(
 		throw;
 	}
 
+	pthread_mutex_init(&_send_mutex, NULL);
 	print(log_debug, "===> Created LinKNX-API %s:%i", channel()->name(), _host.c_str(), _port);
 }
 
 vz::api::LinKNX::~LinKNX()
 {
+	pthread_mutex_destroy(&_send_mutex);
 }
 
 void vz::api::LinKNX::send()
 {
 	int value = 0;
-	std::stringstream sendstream;
-	sendstream << "<write>‌";
+	bool do_send = false;
 
 	Buffer::Ptr buf = channel()->buffer();
-
 	buf->lock();  
+
+	if (_sendstream.tellp() <= 0) {
+		print(log_finest, "_sendstream.tellp = %ld", channel()->name(), _sendstream.tellp());
+		_sendstream << "<write>‌";
+		do_send = true;
+	}
 
 	for (Buffer::iterator it = buf->begin(); it != buf->end(); it++) {
 		print(log_finest, "Reading buffer: timestamp %lld value %f", channel()->name(), it->time_ms(), it->value());
 		value = it->value();
-		sendstream << "<object id=\"" << _knx_group << "\" value=\"" << std::to_string(value) << "\"/>";
+		_sendstream << "<object id=\"" << _knx_group << "\" value=\"" << std::to_string(value) << "\"/>";
 		it->mark_delete();
 	}
 
-	buf->unlock();
-	buf->clean();
-
-	sendstream << "</write>\n\x04";
-
-	if (value != _previous_val)
+	if (value != _previous_val && do_send)
 	{
 		int sockfd = 0;
 		struct sockaddr_in serv_addr;
@@ -111,7 +112,7 @@ void vz::api::LinKNX::send()
 		if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
 		{
 			print(log_warning, "LinKNX socket creation error", NULL);
-			return;
+			goto out;
 		}
 
 		memset(&serv_addr, '0', sizeof(serv_addr));
@@ -121,7 +122,7 @@ void vz::api::LinKNX::send()
 
 		if ((he = gethostbyname(_host.c_str())) == NULL ) {
 			print(log_warning, "Can't resolve host %s", channel()->name(), _host.c_str());
-			return;
+			goto out;
 		}
 
 		memcpy(&serv_addr.sin_addr, he->h_addr_list[0], he->h_length);
@@ -130,16 +131,29 @@ void vz::api::LinKNX::send()
 		{
 			print(log_warning, "Connection Failed", channel()->name());
 			close(sockfd);
-			return; 
+			goto out;
 		}
 
-		const std::string& tmp = sendstream.str();   
+		print(log_debug, "...sleeping 5s...", channel()->name());
+		pthread_mutex_t fakeMutex = PTHREAD_MUTEX_INITIALIZER;
+		pthread_cond_t fakeCond = PTHREAD_COND_INITIALIZER;
+		struct timespec ts;
+		clock_gettime(CLOCK_REALTIME, &ts);
+		ts.tv_sec += 5;
+		pthread_mutex_lock(&fakeMutex);
+		pthread_cond_timedwait(&fakeCond, &fakeMutex, &ts);
+		pthread_mutex_unlock(&fakeMutex);
+
+		pthread_mutex_lock(&_send_mutex);
+		_sendstream << "</write>\n\x04";
+		const std::string& tmp = _sendstream.str();
 		const char* sendbuf = tmp.c_str();
+		print(log_debug, "do send: %s", channel()->name(), sendbuf);
 		int n = write(sockfd, sendbuf, strlen(sendbuf));
 		if (n < 0) {
 			print(log_warning, "Error writing to socket", channel()->name()); 
 			close(sockfd);
-			return;
+			goto out;
 		}
 		ssize_t valread = read(sockfd, recvbuffer, 1024);
 		if (valread > 0) {
@@ -151,7 +165,14 @@ void vz::api::LinKNX::send()
 			}
 		}
 		close(sockfd);
+		_sendstream.clear();
+		pthread_mutex_unlock(&_send_mutex);
 	}
+	goto out;
+
+out:
+	buf->unlock();
+	buf->clean();
 }
 
 void vz::api::LinKNX::register_device() {

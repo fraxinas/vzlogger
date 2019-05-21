@@ -41,6 +41,8 @@
 
 namespace vz {
 	namespace api {
+		std::stringstream _sendstream;
+		pthread_mutex_t _send_mutex;
 
 		class LinKNX : public ApiIF {
 		public:
@@ -69,7 +71,6 @@ namespace vz {
 			time_t _first_ts;
 			long _first_counter;
 			long _last_counter;
-	
 		}; //class LinKNX
 	
 	} // namespace api
